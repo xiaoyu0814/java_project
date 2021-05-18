@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analysis-configmap
+  namespace: pie-clouds
+data:
+  application.yml: |
+    server:
+      port: 8080
+      servlet:
+        context-path: /geoAnalysis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-server
+  namespace: pie-clouds
+spec:
+  selector:
+    matchLabels:
+      name: analysis-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: analysis-server
+    spec:
+      nodeName: master
+      containers:
+        - name: analysis-server
+          image: 192.168.0.147:1180/pie-clouds/pie-analysis:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8080
+          volumeMounts:
+          - name: configmap-volume
+            mountPath: /wms/application.yml
+            subPath: application.yml
+      volumes:
+      - name: configmap-volume
+        configMap:
+          name: analysis-configmap
+          items:
+            - key: application.yml
+              path: application.yml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: sthx
+  name: sthx-task-server
+  labels:
+    app: sthx-task-server
+spec:
+  type: NodePort
+  selector:
+    name: sthx-task-server
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 31010
